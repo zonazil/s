@@ -4,64 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>Zonazil</title>
 <style>
 * {margin:0;padding:0;box-sizing:border-box}
-html, body {width:100%;height:100%;background:#0a0a0a;color:white;font-family:'Segoe UI',sans-serif}
+html,body {width:100%;height:100%;background:#0a0a0a;color:white;font-family:'Segoe UI',sans-serif}
 body {display:flex;align-items:center;justify-content:center}
 .box {background:#111;border:1px solid #333;border-radius:16px;padding:48px 64px;text-align:center;width:90%;max-width:480px}
 .logo {font-size:28px;font-weight:900;color:#0f0;margin-bottom:8px;letter-spacing:2px}
 .sub {color:#666;font-size:14px;margin-bottom:40px}
 .label {color:#888;font-size:13px;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
-.senha {font-size:52px;font-weight:900;color:#0f0;letter-spacing:8px;background:#0a0a0a;border:2px solid #0f0;border-radius:10px;padding:20px 32px;margin-bottom:16px;font-family:monospace;min-height:80px;display:flex;align-items:center;justify-content:center}
+.senha {font-size:52px;font-weight:900;color:#0f0;letter-spacing:8px;background:#0a0a0a;border:2px solid #0f0;border-radius:10px;padding:20px 32px;margin-bottom:16px;font-family:monospace}
 .val {color:#555;font-size:12px}
 </style>
 </head>
 <body>
 <div class="box">
-<div class="logo">ZONAZIL</div>
-<div class="sub">Codigo de acesso ao software</div>
-<div class="label">Seu codigo e</div>
-<div class="senha" id="senha">Carregando...</div>
-<div class="val">Valido por 5 minutos</div>
+  <div class="logo">ZONAZIL</div>
+  <div class="sub">Codigo de acesso ao software</div>
+  <div class="label">Seu codigo e</div>
+  <div class="senha" id="cod">...</div>
+  <div class="val" id="timer"></div>
 </div>
-
 <script>
 const CHAVE = "zonazil2025_";
 
-function sha256(str) {
-    var uint8 = new TextEncoder().encode(str);
-    return crypto.subtle.digest('SHA-256', uint8).then(hashBuffer => {
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return hashHex.substring(0, 8).toUpperCase();
-    });
-}
-
-async function gerar_senha() {
-    const agora = new Date();
-    const ano = agora.getFullYear();
-    const mes = String(agora.getMonth() + 1).padStart(2, '0');
-    const dia = String(agora.getDate()).padStart(2, '0');
-    const hora = String(agora.getHours()).padStart(2, '0');
-    const minuto = Math.floor(agora.getMinutes() / 5);
-    
-    const bloco = ano + mes + dia + hora + minuto;
-    const texto = CHAVE + bloco;
-    
-    const hash = await sha256(texto);
-    return hash;
+async function sha256hex(texto) {
+  const enc = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2,'0')).join('')
+    .substring(0,8).toUpperCase();
 }
 
 async function atualizar() {
-    const senha = await gerar_senha();
-    document.getElementById('senha').textContent = senha;
+  const d = new Date();
+  // USA UTC - igual ao Python (utcnow)
+  const ano  = d.getUTCFullYear();
+  const mes  = String(d.getUTCMonth()+1).padStart(2,'0');
+  const dia  = String(d.getUTCDate()).padStart(2,'0');
+  const hora = String(d.getUTCHours()).padStart(2,'0');
+  const bloco = Math.floor(d.getUTCMinutes()/5);
+  // Formato identico ao Python: CHAVE + "202503031445"
+  const texto = CHAVE + ano + mes + dia + hora + bloco;
+  const senha = await sha256hex(texto);
+  document.getElementById('cod').textContent = senha;
+  const seg = 300 - ((d.getUTCMinutes()%5)*60 + d.getUTCSeconds());
+  const m = Math.floor(seg/60);
+  const s = String(seg%60).padStart(2,'0');
+  document.getElementById('timer').textContent = "Expira em " + m + ":" + s;
 }
 
 atualizar();
-setInterval(atualizar, 5000);
+setInterval(atualizar, 1000);
 </script>
 </body>
 </html>
